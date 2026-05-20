@@ -19,7 +19,6 @@ function AvatarCircle({ name, size = 'lg' }: { name: string; size?: 'lg' | 'sm' 
     .slice(0, 2)
     .map((n) => n[0].toUpperCase())
     .join('')
-
   const sz = size === 'lg' ? 'w-20 h-20 text-2xl' : 'w-12 h-12 text-base'
   return (
     <div className={`${sz} rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center shrink-0`}>
@@ -34,6 +33,7 @@ export default function CustomerProfilePage() {
   const [changingPw, setChangingPw] = useState(false)
   const [showNewPw, setShowNewPw] = useState(false)
   const [user, setUser] = useState<any>(null)
+  const [session, setSession] = useState<any>(null)
 
   const [profile, setProfile] = useState({
     full_name: '',
@@ -46,19 +46,20 @@ export default function CustomerProfilePage() {
   useEffect(() => {
     const load = async () => {
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      setUser(user)
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+      setSession(session)
+      setUser(session.user)
 
       const { data: p } = await supabase
         .from('profiles')
-        .select('*')
-        .eq('id', user.id)
+        .select('full_name, phone, address')
+        .eq('id', session.user.id)
         .maybeSingle()
 
       setProfile({
-        full_name: p?.full_name || user.user_metadata?.full_name || '',
-        phone: p?.phone || user.user_metadata?.phone || '',
+        full_name: p?.full_name || session.user.user_metadata?.full_name || '',
+        phone: p?.phone || session.user.user_metadata?.phone || '',
         address: p?.address || '',
       })
       setLoading(false)
@@ -74,23 +75,21 @@ export default function CustomerProfilePage() {
     }
     setSaving(true)
     try {
-      const supabase = createClient()
-      const { error } = await supabase
-        .from('profiles')
-        .upsert({
-          id: user.id,
-          full_name: profile.full_name.trim(),
-          phone: profile.phone.trim(),
-          address: profile.address.trim(),
+      const res = await fetch('/api/profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({
+          full_name: profile.full_name,
+          phone: profile.phone,
+          address: profile.address,
           role: 'customer',
-        })
-
-      if (error) throw error
-
-      await supabase.auth.updateUser({
-        data: { full_name: profile.full_name.trim() },
+        }),
       })
-
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Save failed')
       toast.success('Profile saved!', { description: 'Your changes have been updated.' })
     } catch (err: any) {
       toast.error('Failed to save', { description: err.message })
@@ -136,13 +135,11 @@ export default function CustomerProfilePage() {
   return (
     <CustomerLayout>
       <div className="max-w-2xl mx-auto">
-        {/* Page header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">My Profile</h1>
           <p className="text-gray-500 mt-1">Manage your account details and preferences</p>
         </div>
 
-        {/* Avatar + email summary */}
         <Card className="shadow-md mb-6">
           <CardContent className="py-6">
             <div className="flex items-center gap-5">
@@ -162,7 +159,6 @@ export default function CustomerProfilePage() {
           </CardContent>
         </Card>
 
-        {/* Profile form */}
         <Card className="shadow-md mb-6">
           <CardHeader>
             <CardTitle className="text-lg">Personal Information</CardTitle>
@@ -210,7 +206,6 @@ export default function CustomerProfilePage() {
                 />
               </div>
 
-
               <div>
                 <Label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-1.5">
                   <Mail className="w-4 h-4 text-gray-400" /> Email Address
@@ -232,7 +227,6 @@ export default function CustomerProfilePage() {
           </CardContent>
         </Card>
 
-        {/* Password change */}
         <Card className="shadow-md mb-8">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">

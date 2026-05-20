@@ -41,6 +41,7 @@ export default function CollectorProfilePage() {
   const [changingPw, setChangingPw] = useState(false)
   const [showNewPw, setShowNewPw] = useState(false)
   const [user, setUser] = useState<any>(null)
+  const [session, setSession] = useState<any>(null)
   const [stats, setStats] = useState({ completed: 0, total: 0 })
 
   const [profile, setProfile] = useState({
@@ -57,22 +58,24 @@ export default function CollectorProfilePage() {
   useEffect(() => {
     const load = async () => {
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      setUser(user)
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+      setSession(session)
+      setUser(session.user)
 
       const [{ data: p }, { data: jobs }] = await Promise.all([
-        supabase.from('profiles').select('*').eq('id', user.id).maybeSingle(),
-        supabase.from('bookings').select('status').eq('collector_id', user.id),
+        supabase.from('profiles').select('full_name, phone, address').eq('id', session.user.id).maybeSingle(),
+        supabase.from('bookings').select('status').eq('collector_id', session.user.id),
       ])
 
+      const meta = session.user.user_metadata || {}
       setProfile({
-        full_name: p?.full_name || user.user_metadata?.full_name || '',
-        phone: p?.phone || user.user_metadata?.phone || '',
+        full_name: p?.full_name || meta.full_name || '',
+        phone: p?.phone || meta.phone || '',
         address: p?.address || '',
-        vehicle_type: p?.vehicle_type || '',
-        vehicle_plate: p?.vehicle_plate || '',
-        service_area: p?.service_area || '',
+        vehicle_type: meta.vehicle_type || '',
+        vehicle_plate: meta.vehicle_plate || '',
+        service_area: meta.service_area || '',
       })
 
       const jobList = jobs || []
@@ -80,7 +83,6 @@ export default function CollectorProfilePage() {
         completed: jobList.filter((j) => j.status === 'completed').length,
         total: jobList.length,
       })
-
       setLoading(false)
     }
     load()
@@ -94,26 +96,24 @@ export default function CollectorProfilePage() {
     }
     setSaving(true)
     try {
-      const supabase = createClient()
-      const { error } = await supabase
-        .from('profiles')
-        .upsert({
-          id: user.id,
-          full_name: profile.full_name.trim(),
-          phone: profile.phone.trim(),
-          address: profile.address.trim(),
-          vehicle_type: profile.vehicle_type,
-          vehicle_plate: profile.vehicle_plate.trim().toUpperCase(),
-          service_area: profile.service_area.trim(),
+      const res = await fetch('/api/profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({
+          full_name: profile.full_name,
+          phone: profile.phone,
+          address: profile.address,
           role: 'collector',
-        })
-
-      if (error) throw error
-
-      await supabase.auth.updateUser({
-        data: { full_name: profile.full_name.trim() },
+          vehicle_type: profile.vehicle_type,
+          vehicle_plate: profile.vehicle_plate,
+          service_area: profile.service_area,
+        }),
       })
-
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Save failed')
       toast.success('Profile saved!', { description: 'Your collector profile has been updated.' })
     } catch (err: any) {
       toast.error('Failed to save', { description: err.message })
@@ -164,7 +164,6 @@ export default function CollectorProfilePage() {
           <p className="text-gray-500 mt-1">Manage your collector account and vehicle details</p>
         </div>
 
-        {/* Avatar + stats summary */}
         <Card className="shadow-md mb-6">
           <CardContent className="py-6">
             <div className="flex items-center gap-5">
@@ -181,7 +180,6 @@ export default function CollectorProfilePage() {
                 </span>
               </div>
             </div>
-            {/* Stats */}
             <div className="grid grid-cols-2 gap-4 mt-5 pt-5 border-t">
               <div className="text-center">
                 <p className="text-2xl font-bold text-emerald-700">{stats.completed}</p>
@@ -195,7 +193,6 @@ export default function CollectorProfilePage() {
           </CardContent>
         </Card>
 
-        {/* Personal info */}
         <Card className="shadow-md mb-6">
           <CardHeader>
             <CardTitle className="text-lg">Personal Information</CardTitle>
@@ -252,7 +249,6 @@ export default function CollectorProfilePage() {
                 />
               </div>
 
-              {/* Vehicle details */}
               <div className="pt-2 border-t">
                 <p className="text-sm font-semibold text-gray-700 flex items-center gap-2 mb-4">
                   <Truck className="w-4 h-4 text-emerald-600" /> Vehicle Details
@@ -307,7 +303,6 @@ export default function CollectorProfilePage() {
           </CardContent>
         </Card>
 
-        {/* Password change */}
         <Card className="shadow-md mb-8">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
