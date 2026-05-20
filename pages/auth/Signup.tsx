@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
   Loader2, Truck, Eye, EyeOff, User, Recycle, Shield, MapPin,
-  CheckCircle, Circle
+  CheckCircle, Circle, ArrowLeft
 } from 'lucide-react'
 import { toast } from 'sonner'
 import SupabaseGuard from '@/components/shared/SupabaseGuard'
@@ -126,7 +126,14 @@ function SignupForm() {
       {/* Right form panel */}
       <div className="flex-1 flex items-center justify-center p-6 bg-gray-50">
         <div className="w-full max-w-md">
-          {/* Mobile logo */}
+          {/* Back button */}
+          <button
+            onClick={() => navigate('/')}
+            className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 mb-6 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" /> Back to Home
+          </button>
+
           <div className="flex items-center gap-3 mb-8 lg:hidden">
             <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center">
               <Truck className="w-6 h-6 text-white" />

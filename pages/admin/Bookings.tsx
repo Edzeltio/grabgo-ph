@@ -48,18 +48,35 @@ export default function AdminBookings() {
   const load = async () => {
     setLoading(true)
     const supabase = createClient()
-    const { data, error } = await supabase
+    const { data: bkData, error } = await supabase
       .from('bookings')
-      .select(`
-        id, status, total_amount, estimated_weight_kg, address, notes, created_at,
-        waste_types(name),
-        customer:profiles!bookings_customer_id_fkey(full_name),
-        collector:profiles!bookings_collector_id_fkey(full_name)
-      `)
+      .select('id, status, total_amount, estimated_weight_kg, address, notes, created_at, customer_id, collector_id, waste_types(name)')
       .order('created_at', { ascending: false })
 
     if (error) { toast.error('Failed to load bookings'); setLoading(false); return }
-    setBookings((data as any) || [])
+    const bkList = bkData || []
+
+    // Fetch unique profile names separately to avoid FK join RLS issues
+    const ids = [...new Set([
+      ...bkList.map((b: any) => b.customer_id),
+      ...bkList.map((b: any) => b.collector_id),
+    ].filter(Boolean))]
+
+    let profileMap: Record<string, string> = {}
+    if (ids.length > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', ids)
+      ;(profiles || []).forEach((p: any) => { profileMap[p.id] = p.full_name })
+    }
+
+    const enriched = bkList.map((b: any) => ({
+      ...b,
+      customer: { full_name: profileMap[b.customer_id] || null },
+      collector: { full_name: profileMap[b.collector_id] || null },
+    }))
+    setBookings(enriched as any)
     setLoading(false)
   }
 

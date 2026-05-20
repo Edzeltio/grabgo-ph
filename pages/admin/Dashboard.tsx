@@ -1,8 +1,87 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Users, BookOpen, DollarSign, Truck, TrendingUp, Clock } from 'lucide-react'
+import { Users, BookOpen, DollarSign, Truck, TrendingUp, Clock, TriangleAlert, Copy, Check, ChevronDown, ChevronUp } from 'lucide-react'
 import AdminLayout from '@/components/shared/AdminLayout'
+
+const RLS_SQL = `-- Run this once in Supabase → SQL Editor
+
+-- Admins can read all profiles
+create policy "admin_read_profiles" on profiles
+  for select to authenticated
+  using ((select role from profiles where id = auth.uid()) = 'admin' or id = auth.uid());
+
+-- Admins can update any profile
+create policy "admin_update_profiles" on profiles
+  for update to authenticated
+  using ((select role from profiles where id = auth.uid()) = 'admin');
+
+-- Admins can delete any profile
+create policy "admin_delete_profiles" on profiles
+  for delete to authenticated
+  using ((select role from profiles where id = auth.uid()) = 'admin');
+
+-- Admins can read all bookings
+create policy "admin_read_bookings" on bookings
+  for select to authenticated
+  using ((select role from profiles where id = auth.uid()) = 'admin');
+
+-- Admins can update any booking
+create policy "admin_update_bookings" on bookings
+  for update to authenticated
+  using ((select role from profiles where id = auth.uid()) = 'admin');
+
+-- Admins can manage waste types
+create policy "admin_manage_waste_types" on waste_types
+  for all to authenticated
+  using ((select role from profiles where id = auth.uid()) = 'admin')
+  with check ((select role from profiles where id = auth.uid()) = 'admin');`
+
+function RlsSetupNotice() {
+  const [open, setOpen] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  const copy = async () => {
+    await navigator.clipboard.writeText(RLS_SQL)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <div className="mb-6 border border-amber-200 bg-amber-50 rounded-xl overflow-hidden">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-amber-100 transition-colors"
+      >
+        <TriangleAlert className="w-4 h-4 text-amber-600 shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-amber-800">Supabase permissions setup required</p>
+          <p className="text-xs text-amber-600 mt-0.5">Run these RLS policies so the admin panel can read and write all data</p>
+        </div>
+        {open ? <ChevronUp className="w-4 h-4 text-amber-500 shrink-0" /> : <ChevronDown className="w-4 h-4 text-amber-500 shrink-0" />}
+      </button>
+      {open && (
+        <div className="border-t border-amber-200 px-4 pb-4">
+          <p className="text-xs text-amber-700 mt-3 mb-2 font-medium">
+            Open your Supabase dashboard → SQL Editor → New query → paste and run:
+          </p>
+          <div className="relative">
+            <pre className="bg-gray-900 text-gray-100 text-xs rounded-lg p-4 overflow-x-auto whitespace-pre leading-relaxed font-mono">
+              {RLS_SQL}
+            </pre>
+            <button
+              onClick={copy}
+              className="absolute top-2 right-2 flex items-center gap-1.5 text-xs bg-gray-700 hover:bg-gray-600 text-gray-200 px-2.5 py-1.5 rounded-md transition-colors"
+            >
+              {copied ? <><Check className="w-3 h-3" />Copied!</> : <><Copy className="w-3 h-3" />Copy</>}
+            </button>
+          </div>
+          <p className="text-xs text-amber-600 mt-2">After running, refresh this page — all admin features will work.</p>
+        </div>
+      )}
+    </div>
+  )
+}
 
 const STATUS_COLORS: Record<string, string> = {
   pending:   'bg-yellow-100 text-yellow-800',
@@ -82,6 +161,8 @@ export default function AdminDashboard() {
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
         <p className="text-gray-500 text-sm mt-1">Platform overview for GarbGo PH — Zamboanga City</p>
       </div>
+
+      <RlsSetupNotice />
 
       {/* KPI cards */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">

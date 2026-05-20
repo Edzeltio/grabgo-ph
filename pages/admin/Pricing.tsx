@@ -56,11 +56,13 @@ export default function AdminPricing() {
     try {
       const supabase = createClient()
       if (form.id) {
-        const { error } = await supabase
+        const { data: updated, error } = await supabase
           .from('waste_types')
           .update({ name: form.name.trim(), base_price_per_kg: price })
           .eq('id', form.id)
+          .select()
         if (error) throw error
+        if (!updated || updated.length === 0) throw new Error('Permission denied — see Supabase setup notice on the dashboard.')
         toast.success('Waste type updated')
       } else {
         const { error } = await supabase

@@ -4,7 +4,7 @@ import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Loader2, Truck, Eye, EyeOff, Recycle, Shield, MapPin } from 'lucide-react'
+import { Loader2, Truck, Eye, EyeOff, Recycle, Shield, MapPin, ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import SupabaseGuard from '@/components/shared/SupabaseGuard'
 
@@ -107,6 +107,14 @@ function LoginForm() {
       {/* Right form panel */}
       <div className="flex-1 flex items-center justify-center p-6 bg-gray-50">
         <div className="w-full max-w-md">
+          {/* Back button */}
+          <button
+            onClick={() => navigate('/')}
+            className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 mb-6 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" /> Back to Home
+          </button>
+
           {/* Mobile logo */}
           <div className="flex items-center gap-3 mb-8 lg:hidden">
             <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center">
