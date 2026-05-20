@@ -4,34 +4,40 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Users, BookOpen, DollarSign, Truck, TrendingUp, Clock, TriangleAlert, Copy, Check, ChevronDown, ChevronUp } from 'lucide-react'
 import AdminLayout from '@/components/shared/AdminLayout'
 
-const RLS_SQL = `-- Run this once in Supabase → SQL Editor
+const RLS_SQL = `-- Safe to run multiple times in Supabase → SQL Editor
 
 -- Admins can read all profiles
+drop policy if exists "admin_read_profiles" on profiles;
 create policy "admin_read_profiles" on profiles
   for select to authenticated
   using ((select role from profiles where id = auth.uid()) = 'admin' or id = auth.uid());
 
 -- Admins can update any profile
+drop policy if exists "admin_update_profiles" on profiles;
 create policy "admin_update_profiles" on profiles
   for update to authenticated
   using ((select role from profiles where id = auth.uid()) = 'admin');
 
 -- Admins can delete any profile
+drop policy if exists "admin_delete_profiles" on profiles;
 create policy "admin_delete_profiles" on profiles
   for delete to authenticated
   using ((select role from profiles where id = auth.uid()) = 'admin');
 
 -- Admins can read all bookings
+drop policy if exists "admin_read_bookings" on bookings;
 create policy "admin_read_bookings" on bookings
   for select to authenticated
   using ((select role from profiles where id = auth.uid()) = 'admin');
 
 -- Admins can update any booking
+drop policy if exists "admin_update_bookings" on bookings;
 create policy "admin_update_bookings" on bookings
   for update to authenticated
   using ((select role from profiles where id = auth.uid()) = 'admin');
 
 -- Admins can manage waste types
+drop policy if exists "admin_manage_waste_types" on waste_types;
 create policy "admin_manage_waste_types" on waste_types
   for all to authenticated
   using ((select role from profiles where id = auth.uid()) = 'admin')
