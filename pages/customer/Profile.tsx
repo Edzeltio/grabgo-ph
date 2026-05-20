@@ -39,7 +39,6 @@ export default function CustomerProfilePage() {
     full_name: '',
     phone: '',
     address: '',
-    bio: '',
   })
 
   const [pwForm, setPwForm] = useState({ newPassword: '', confirmPassword: '' })
@@ -61,7 +60,6 @@ export default function CustomerProfilePage() {
         full_name: p?.full_name || user.user_metadata?.full_name || '',
         phone: p?.phone || user.user_metadata?.phone || '',
         address: p?.address || '',
-        bio: p?.bio || '',
       })
       setLoading(false)
     }
@@ -84,7 +82,6 @@ export default function CustomerProfilePage() {
           full_name: profile.full_name.trim(),
           phone: profile.phone.trim(),
           address: profile.address.trim(),
-          bio: profile.bio.trim(),
           role: 'customer',
           updated_at: new Date().toISOString(),
         })
@@ -214,18 +211,6 @@ export default function CustomerProfilePage() {
                 />
               </div>
 
-              <div>
-                <Label htmlFor="bio" className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-1.5">
-                  Bio <span className="text-gray-400 font-normal">(optional)</span>
-                </Label>
-                <Textarea
-                  id="bio"
-                  value={profile.bio}
-                  onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
-                  placeholder="Tell us a little about yourself..."
-                  rows={3}
-                />
-              </div>
 
               <div>
                 <Label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-1.5">

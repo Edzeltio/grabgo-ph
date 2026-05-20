@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import {
   Loader2, User, Phone, Mail, MapPin, Save,
-  Truck, Eye, EyeOff, KeyRound, Star, BadgeCheck
+  Truck, Eye, EyeOff, KeyRound, BadgeCheck
 } from 'lucide-react'
 import { toast } from 'sonner'
 import CollectorLayout from '@/components/shared/CollectorLayout'
@@ -47,7 +47,6 @@ export default function CollectorProfilePage() {
     full_name: '',
     phone: '',
     address: '',
-    bio: '',
     vehicle_type: '',
     vehicle_plate: '',
     service_area: '',
@@ -71,7 +70,6 @@ export default function CollectorProfilePage() {
         full_name: p?.full_name || user.user_metadata?.full_name || '',
         phone: p?.phone || user.user_metadata?.phone || '',
         address: p?.address || '',
-        bio: p?.bio || '',
         vehicle_type: p?.vehicle_type || '',
         vehicle_plate: p?.vehicle_plate || '',
         service_area: p?.service_area || '',
@@ -104,7 +102,6 @@ export default function CollectorProfilePage() {
           full_name: profile.full_name.trim(),
           phone: profile.phone.trim(),
           address: profile.address.trim(),
-          bio: profile.bio.trim(),
           vehicle_type: profile.vehicle_type,
           vehicle_plate: profile.vehicle_plate.trim().toUpperCase(),
           service_area: profile.service_area.trim(),
@@ -253,19 +250,6 @@ export default function CollectorProfilePage() {
                   onChange={(e) => setProfile({ ...profile, address: e.target.value })}
                   placeholder="House #, Street, Barangay, Zamboanga City"
                   rows={2}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="bio" className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-1.5">
-                  <Star className="w-4 h-4 text-gray-400" /> Bio / About You
-                </Label>
-                <Textarea
-                  id="bio"
-                  value={profile.bio}
-                  onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
-                  placeholder="Tell customers about your experience and commitment to proper waste handling..."
-                  rows={3}
                 />
               </div>
 
