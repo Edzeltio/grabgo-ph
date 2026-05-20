@@ -12,7 +12,6 @@ const BookingMap = lazy(() => import('@/components/BookingMap'))
 const STATUS_COLORS: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-800 border border-yellow-200',
   accepted: 'bg-blue-100 text-blue-800 border border-blue-200',
-  in_progress: 'bg-purple-100 text-purple-800 border border-purple-200',
   completed: 'bg-green-100 text-green-800 border border-green-200',
   cancelled: 'bg-red-100 text-red-800 border border-red-200',
 }
@@ -20,14 +19,12 @@ const STATUS_COLORS: Record<string, string> = {
 const STATUS_LABELS: Record<string, string> = {
   pending: '⏳ Pending',
   accepted: '✅ Collector Assigned',
-  in_progress: '🚛 On The Way',
   completed: '🎉 Completed',
   cancelled: '❌ Cancelled',
 }
 
 const STATUS_MESSAGES: Record<string, string> = {
   accepted: 'A collector has accepted your pickup!',
-  in_progress: 'Your collector is on the way!',
   completed: 'Your garbage has been picked up!',
   cancelled: 'Your booking was cancelled.',
 }
@@ -215,12 +212,7 @@ export default function CustomerDashboard() {
                         <span className="font-medium">A collector has been assigned — they'll be there soon!</span>
                       </div>
                     )}
-                    {booking.status === 'in_progress' && (
-                      <div className="mt-3 flex items-center gap-2 text-sm text-purple-700 bg-purple-50 px-3 py-2 rounded-lg">
-                        <span className="animate-pulse font-medium">🚛 Your collector is on the way!</span>
-                      </div>
-                    )}
-                    {['accepted', 'in_progress'].includes(booking.status) && booking.lat && booking.lng && (
+                    {booking.status === 'accepted' && booking.lat && booking.lng && (
                       <Suspense fallback={
                         <div className="mt-3 h-48 rounded-xl bg-gray-100 flex items-center justify-center">
                           <Loader2 className="w-5 h-5 animate-spin text-emerald-600" />

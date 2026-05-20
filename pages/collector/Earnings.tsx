@@ -19,7 +19,7 @@ export default function CollectorEarningsPage() {
           .from('bookings')
           .select('*, waste_types(name)')
           .eq('collector_id', user.id)
-          .in('status', ['accepted', 'in_progress', 'completed'])
+          .in('status', ['accepted', 'completed'])
           .order('created_at', { ascending: false })
 
         setJobs(data || [])
@@ -127,9 +127,7 @@ export default function CollectorEarningsPage() {
                   <div className="text-right">
                     <p className="font-bold text-emerald-700">₱{(job.total_amount || 0).toFixed(2)}</p>
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                      job.status === 'completed' ? 'bg-green-100 text-green-700' :
-                      job.status === 'in_progress' ? 'bg-purple-100 text-purple-700' :
-                      'bg-blue-100 text-blue-700'
+                      job.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
                     }`}>
                       {job.status.replace('_', ' ')}
                     </span>

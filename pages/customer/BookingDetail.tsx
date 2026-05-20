@@ -13,28 +13,25 @@ import { toast } from 'sonner'
 const BookingMap = lazy(() => import('@/components/BookingMap'))
 
 const STEPS = [
-  { key: 'pending',     label: 'Booking Placed',      icon: Package,      desc: 'Your pickup request is live and waiting for a collector.' },
-  { key: 'accepted',    label: 'Collector Assigned',  icon: CheckCircle,  desc: 'A verified collector has accepted your request.' },
-  { key: 'in_progress', label: 'On The Way',          icon: Truck,        desc: 'Your collector is heading to your location.' },
-  { key: 'completed',   label: 'Pickup Complete',      icon: CheckCircle,  desc: 'Your garbage has been collected. Thank you!' },
+  { key: 'pending',   label: 'Booking Placed',     icon: Package,     desc: 'Your pickup request is live and waiting for a collector.' },
+  { key: 'accepted',  label: 'Collector Assigned', icon: CheckCircle, desc: 'A verified collector has accepted your request and is on the way.' },
+  { key: 'completed', label: 'Pickup Complete',    icon: CheckCircle, desc: 'Your garbage has been collected. Thank you!' },
 ]
 
-const STEP_ORDER = ['pending', 'accepted', 'in_progress', 'completed']
+const STEP_ORDER = ['pending', 'accepted', 'completed']
 
 const STATUS_COLORS: Record<string, string> = {
-  pending:     'bg-yellow-100 text-yellow-800 border border-yellow-200',
-  accepted:    'bg-blue-100 text-blue-800 border border-blue-200',
-  in_progress: 'bg-purple-100 text-purple-800 border border-purple-200',
-  completed:   'bg-green-100 text-green-800 border border-green-200',
-  cancelled:   'bg-red-100 text-red-800 border border-red-200',
+  pending:   'bg-yellow-100 text-yellow-800 border border-yellow-200',
+  accepted:  'bg-blue-100 text-blue-800 border border-blue-200',
+  completed: 'bg-green-100 text-green-800 border border-green-200',
+  cancelled: 'bg-red-100 text-red-800 border border-red-200',
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  pending:     '⏳ Pending',
-  accepted:    '✅ Collector Assigned',
-  in_progress: '🚛 On The Way',
-  completed:   '🎉 Completed',
-  cancelled:   '❌ Cancelled',
+  pending:   '⏳ Pending',
+  accepted:  '✅ Collector Assigned',
+  completed: '🎉 Completed',
+  cancelled: '❌ Cancelled',
 }
 
 export default function BookingDetailPage() {
@@ -79,7 +76,7 @@ export default function BookingDetailPage() {
 
             const messages: Record<string, string> = {
               accepted:    'A collector has been assigned to your pickup!',
-              in_progress: 'Your collector is on the way!',
+
               completed:   'Your garbage has been picked up. Thank you!',
               cancelled:   'Your booking was cancelled.',
             }
@@ -203,7 +200,7 @@ export default function BookingDetailPage() {
         </Card>
 
         {/* Map (only for active bookings with coordinates) */}
-        {['accepted', 'in_progress'].includes(booking.status) && booking.lat && booking.lng && (
+        {booking.status === 'accepted' && booking.lat && booking.lng && (
           <Card className="shadow-md mb-6">
             <CardContent className="py-5">
               <h2 className="text-base font-semibold mb-3 flex items-center gap-2">

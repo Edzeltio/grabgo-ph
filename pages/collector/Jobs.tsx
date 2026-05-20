@@ -8,7 +8,6 @@ import CollectorLayout from '@/components/shared/CollectorLayout'
 
 const STATUS_COLORS: Record<string, string> = {
   accepted: 'bg-blue-100 text-blue-800',
-  in_progress: 'bg-purple-100 text-purple-800',
   completed: 'bg-green-100 text-green-800',
 }
 
@@ -41,7 +40,7 @@ export default function CollectorJobsPage() {
           .from('bookings')
           .select('*, waste_types(name)')
           .eq('collector_id', user.id)
-          .in('status', ['accepted', 'in_progress'])
+          .eq('status', 'accepted')
           .order('created_at', { ascending: false }),
       ])
 
@@ -86,7 +85,7 @@ export default function CollectorJobsPage() {
               if (updated.status === 'completed') {
                 setMyActiveJobs(prev => prev.filter(j => j.id !== updated.id))
                 toast.success('Job marked complete!')
-              } else if (['accepted', 'in_progress'].includes(updated.status)) {
+              } else if (updated.status === 'accepted') {
                 setMyActiveJobs(prev =>
                   prev.map(j => j.id === updated.id ? { ...j, ...updated } : j)
                 )
@@ -145,7 +144,7 @@ export default function CollectorJobsPage() {
     }
   }
 
-  const handleStatusUpdate = async (jobId: string, newStatus: 'in_progress' | 'completed') => {
+  const handleStatusUpdate = async (jobId: string, newStatus: 'completed') => {
     setUpdating(jobId)
     try {
       const supabase = createClient()
@@ -156,15 +155,8 @@ export default function CollectorJobsPage() {
 
       if (error) throw error
 
-      if (newStatus === 'completed') {
-        setMyActiveJobs(prev => prev.filter(j => j.id !== jobId))
-        toast.success("Job completed! Great work 🎉")
-      } else {
-        setMyActiveJobs(prev =>
-          prev.map(j => j.id === jobId ? { ...j, status: newStatus } : j)
-        )
-        toast.info("Status updated to In Progress")
-      }
+      setMyActiveJobs(prev => prev.filter(j => j.id !== jobId))
+      toast.success("Job completed! Great work 🎉")
     } catch (error: any) {
       toast.error("Failed to update status", { description: error.message })
     } finally {
@@ -191,8 +183,8 @@ export default function CollectorJobsPage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <h3 className="text-lg font-semibold">{job.waste_types?.name || 'Waste Pickup'}</h3>
-                        <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${STATUS_COLORS[job.status]}`}>
-                          {job.status === 'in_progress' ? '🚛 In Progress' : '✅ Accepted'}
+                        <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${STATUS_COLORS[job.status] || 'bg-blue-100 text-blue-800'}`}>
+                          ✅ Accepted
                         </span>
                       </div>
                       <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
@@ -201,24 +193,13 @@ export default function CollectorJobsPage() {
                       </div>
                     </div>
                     <div className="flex gap-2 shrink-0">
-                      {job.status === 'accepted' && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleStatusUpdate(job.id, 'in_progress')}
-                          disabled={updating === job.id}
-                          className="text-purple-700 border-purple-300 hover:bg-purple-50"
-                        >
-                          {updating === job.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Truck className="w-4 h-4 mr-1" />On My Way</>}
-                        </Button>
-                      )}
                       <Button
                         size="sm"
                         onClick={() => handleStatusUpdate(job.id, 'completed')}
                         disabled={updating === job.id}
                         className="bg-emerald-600 hover:bg-emerald-700"
                       >
-                        {updating === job.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><CheckCircle className="w-4 h-4 mr-1" />Complete</>}
+                        {updating === job.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><CheckCircle className="w-4 h-4 mr-1" />Mark Complete</>}
                       </Button>
                     </div>
                   </div>
