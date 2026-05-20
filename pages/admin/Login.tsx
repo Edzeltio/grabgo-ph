@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
-import { Lock, Eye, EyeOff, Loader2, ShieldAlert } from 'lucide-react'
+import { Lock, Eye, EyeOff, Loader2, ShieldAlert, ArrowLeft } from 'lucide-react'
 import { useLocation } from 'wouter'
 
 export default function AdminLoginPage() {
@@ -50,6 +50,18 @@ export default function AdminLoginPage() {
   return (
     <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
+
+        {/* Back button */}
+        <div className="mb-6">
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="flex items-center gap-1.5 text-gray-500 hover:text-gray-300 text-sm transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back
+          </button>
+        </div>
 
         {/* Icon */}
         <div className="flex justify-center mb-8">
