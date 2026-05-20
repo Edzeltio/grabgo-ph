@@ -28,18 +28,14 @@ export default function AdminLoginPage() {
 
       if (authError) throw new Error('Invalid email or password.')
 
-      // Check role from user_metadata first (most reliable),
-      // then fall back to the profiles table
-      let role: string | undefined = authData.user.user_metadata?.role
+      // Check profiles table first (admin-managed), fall back to user_metadata
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', authData.user.id)
+        .maybeSingle()
 
-      if (!role) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', authData.user.id)
-          .maybeSingle()
-        role = profile?.role
-      }
+      const role: string | undefined = profile?.role ?? authData.user.user_metadata?.role
 
       if (role !== 'admin') {
         await supabase.auth.signOut()

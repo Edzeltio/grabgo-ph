@@ -25,13 +25,10 @@ function AdminNav({ children }: { children: React.ReactNode }) {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { navigate('/sys/access'); return }
 
-      // Check user_metadata first (reliable, no RLS), then fall back to profiles table
-      let role: string | undefined = user.user_metadata?.role
-      if (!role) {
-        const { data: profile } = await supabase
-          .from('profiles').select('role').eq('id', user.id).maybeSingle()
-        role = profile?.role
-      }
+      // Check profiles table first (admin-managed), fall back to user_metadata
+      const { data: profile } = await supabase
+        .from('profiles').select('role').eq('id', user.id).maybeSingle()
+      const role: string | undefined = profile?.role ?? user.user_metadata?.role
 
       if (role !== 'admin') { navigate('/sys/access'); return }
       setUser(user)
