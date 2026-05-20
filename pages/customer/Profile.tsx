@@ -83,7 +83,6 @@ export default function CustomerProfilePage() {
           phone: profile.phone.trim(),
           address: profile.address.trim(),
           role: 'customer',
-          updated_at: new Date().toISOString(),
         })
 
       if (error) throw error

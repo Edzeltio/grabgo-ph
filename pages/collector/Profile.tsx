@@ -106,7 +106,6 @@ export default function CollectorProfilePage() {
           vehicle_plate: profile.vehicle_plate.trim().toUpperCase(),
           service_area: profile.service_area.trim(),
           role: 'collector',
-          updated_at: new Date().toISOString(),
         })
 
       if (error) throw error
