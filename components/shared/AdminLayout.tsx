@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
 import { useLocation } from 'wouter'
 import {
-  LayoutDashboard, Users, BookOpen, Tag, LogOut, ShieldCheck, Menu, X
+  LayoutDashboard, Users, BookOpen, Tag, LogOut, ShieldCheck, Menu, X, Loader2
 } from 'lucide-react'
 import SupabaseGuard from './SupabaseGuard'
 
@@ -15,20 +15,37 @@ const NAV = [
 
 function AdminNav({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any>(null)
+  const [checking, setChecking] = useState(true)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [location, navigate] = useLocation()
 
   useEffect(() => {
-    if (!isSupabaseConfigured()) return
+    if (!isSupabaseConfigured()) { setChecking(false); return }
     const supabase = createClient()
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { navigate('/sys/access'); return }
-      const { data: profile } = await supabase
-        .from('profiles').select('role').eq('id', user.id).maybeSingle()
-      if (profile?.role !== 'admin') { navigate('/sys/access'); return }
+
+      // Check user_metadata first (reliable, no RLS), then fall back to profiles table
+      let role: string | undefined = user.user_metadata?.role
+      if (!role) {
+        const { data: profile } = await supabase
+          .from('profiles').select('role').eq('id', user.id).maybeSingle()
+        role = profile?.role
+      }
+
+      if (role !== 'admin') { navigate('/sys/access'); return }
       setUser(user)
+      setChecking(false)
     })
   }, [])
+
+  if (checking) {
+    return (
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+        <Loader2 className="w-6 h-6 text-gray-400 animate-spin" />
+      </div>
+    )
+  }
 
   const handleLogout = async () => {
     const supabase = createClient()
