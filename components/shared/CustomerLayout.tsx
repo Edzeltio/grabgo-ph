@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
 import { useLocation } from 'wouter'
-import { Truck, Plus, LogOut } from 'lucide-react'
+import { Truck, Plus, LogOut, UserCircle } from 'lucide-react'
 import SupabaseGuard from './SupabaseGuard'
 
 function CustomerNav({ children }: { children: React.ReactNode }) {
@@ -46,6 +46,10 @@ function CustomerNav({ children }: { children: React.ReactNode }) {
             </button>
             <button onClick={() => navigate('/customer/dashboard')} className="hover:text-emerald-600">
               My Bookings
+            </button>
+            <button onClick={() => navigate('/customer/profile')} className="flex items-center gap-2 hover:text-emerald-600">
+              <UserCircle className="w-5 h-5" />
+              Profile
             </button>
             <div className="flex items-center gap-3">
               <div className="text-right">

@@ -8,8 +8,10 @@ import VerifyEmailPage from "@/pages/auth/VerifyEmail";
 import CustomerDashboard from "@/pages/customer/Dashboard";
 import BookPickupPage from "@/pages/customer/Book";
 import BookingDetailPage from "@/pages/customer/BookingDetail";
+import CustomerProfilePage from "@/pages/customer/Profile";
 import CollectorJobsPage from "@/pages/collector/Jobs";
 import CollectorEarningsPage from "@/pages/collector/Earnings";
+import CollectorProfilePage from "@/pages/collector/Profile";
 
 const queryClient = new QueryClient();
 
@@ -23,8 +25,10 @@ function Router() {
       <Route path="/customer/dashboard" component={CustomerDashboard} />
       <Route path="/customer/book" component={BookPickupPage} />
       <Route path="/customer/booking/:id" component={BookingDetailPage} />
+      <Route path="/customer/profile" component={CustomerProfilePage} />
       <Route path="/collector/jobs" component={CollectorJobsPage} />
       <Route path="/collector/earnings" component={CollectorEarningsPage} />
+      <Route path="/collector/profile" component={CollectorProfilePage} />
       <Route>
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">

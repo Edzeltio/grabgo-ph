@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
 import { useLocation } from 'wouter'
-import { Truck, Briefcase, DollarSign, LogOut } from 'lucide-react'
+import { Truck, Briefcase, DollarSign, LogOut, UserCircle } from 'lucide-react'
 import SupabaseGuard from './SupabaseGuard'
 
 function CollectorNav({ children }: { children: React.ReactNode }) {
@@ -47,6 +47,10 @@ function CollectorNav({ children }: { children: React.ReactNode }) {
             <button onClick={() => navigate('/collector/earnings')} className="flex items-center gap-2 hover:text-emerald-600">
               <DollarSign className="w-5 h-5" />
               Earnings
+            </button>
+            <button onClick={() => navigate('/collector/profile')} className="flex items-center gap-2 hover:text-emerald-600">
+              <UserCircle className="w-5 h-5" />
+              Profile
             </button>
             <div className="flex items-center gap-3">
               <div className="text-right">
