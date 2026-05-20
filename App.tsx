@@ -7,6 +7,7 @@ import SignupPage from "@/pages/auth/Signup";
 import VerifyEmailPage from "@/pages/auth/VerifyEmail";
 import CustomerDashboard from "@/pages/customer/Dashboard";
 import BookPickupPage from "@/pages/customer/Book";
+import BookingDetailPage from "@/pages/customer/BookingDetail";
 import CollectorJobsPage from "@/pages/collector/Jobs";
 import CollectorEarningsPage from "@/pages/collector/Earnings";
 
@@ -21,6 +22,7 @@ function Router() {
       <Route path="/auth/verify-email" component={VerifyEmailPage} />
       <Route path="/customer/dashboard" component={CustomerDashboard} />
       <Route path="/customer/book" component={BookPickupPage} />
+      <Route path="/customer/booking/:id" component={BookingDetailPage} />
       <Route path="/collector/jobs" component={CollectorJobsPage} />
       <Route path="/collector/earnings" component={CollectorEarningsPage} />
       <Route>

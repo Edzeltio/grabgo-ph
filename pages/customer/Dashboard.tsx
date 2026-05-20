@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useLocation } from 'wouter'
-import { MapPin, Clock, CheckCircle, Loader2, Plus, Wifi, WifiOff } from 'lucide-react'
+import { MapPin, Clock, CheckCircle, Loader2, Plus, Wifi, WifiOff, ArrowRight } from 'lucide-react'
 import CustomerLayout from '@/components/shared/CustomerLayout'
 import { toast } from 'sonner'
 
@@ -240,6 +240,16 @@ export default function CustomerDashboard() {
                         ₱{booking.total_amount.toFixed(2)}
                       </p>
                     )}
+                  </div>
+                  <div className="ml-4 shrink-0">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 text-emerald-700 border-emerald-200 hover:bg-emerald-50"
+                      onClick={() => navigate(`/customer/booking/${booking.id}`)}
+                    >
+                      Track <ArrowRight className="w-3.5 h-3.5" />
+                    </Button>
                   </div>
                 </div>
               </CardContent>
