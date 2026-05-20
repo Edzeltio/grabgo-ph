@@ -26,15 +26,22 @@ export default function AdminLoginPage() {
         password,
       })
 
-      if (authError) throw new Error('Access denied.')
+      if (authError) throw new Error('Invalid email or password.')
 
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', authData.user.id)
-        .maybeSingle()
+      // Check role from user_metadata first (most reliable),
+      // then fall back to the profiles table
+      let role: string | undefined = authData.user.user_metadata?.role
 
-      if (profile?.role !== 'admin') {
+      if (!role) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', authData.user.id)
+          .maybeSingle()
+        role = profile?.role
+      }
+
+      if (role !== 'admin') {
         await supabase.auth.signOut()
         throw new Error('Access denied.')
       }
