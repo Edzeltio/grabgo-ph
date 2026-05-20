@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -24,7 +23,6 @@ interface UserProfile {
   role: string | null
 }
 
-// Inline role-change pill with dropdown
 function RoleBadge({ user, onChanged }: { user: UserProfile; onChanged: () => void }) {
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -43,12 +41,12 @@ function RoleBadge({ user, onChanged }: { user: UserProfile; onChanged: () => vo
     setSaving(true)
     setOpen(false)
     try {
-      const supabase = createClient()
-      const { error } = await supabase
-        .from('profiles')
-        .update({ role: newRole })
-        .eq('id', user.id)
-      if (error) throw error
+      const res = await fetch(`/api/admin/users/${user.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: newRole }),
+      })
+      if (!res.ok) throw new Error('Request failed')
       toast.success(`Role changed to ${newRole}`)
       onChanged()
     } catch (err: any) {
@@ -106,21 +104,21 @@ export default function AdminUsers() {
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState<string | null>(null)
 
-  // Create user state
   const [showCreate, setShowCreate] = useState(false)
   const [creating, setCreating] = useState(false)
   const [newUser, setNewUser] = useState({ full_name: '', email: '', password: '', phone: '', role: 'customer' })
 
   const load = async () => {
     setLoading(true)
-    const supabase = createClient()
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, full_name, phone, address, role')
-      .order('full_name', { ascending: true })
-    if (error) { toast.error('Failed to load users'); setLoading(false); return }
-    setUsers(data || [])
-    setLoading(false)
+    try {
+      const res = await fetch('/api/admin/users')
+      const data = await res.json()
+      setUsers(Array.isArray(data) ? data : [])
+    } catch {
+      toast.error('Failed to load users')
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => { load() }, [])
@@ -143,17 +141,17 @@ export default function AdminUsers() {
     if (!editing) return
     setSaving(true)
     try {
-      const supabase = createClient()
-      const { error } = await supabase
-        .from('profiles')
-        .update({
+      const res = await fetch(`/api/admin/users/${editing.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           full_name: editing.full_name?.trim() || null,
           phone:     editing.phone?.trim() || null,
           address:   editing.address?.trim() || null,
           role:      editing.role,
-        })
-        .eq('id', editing.id)
-      if (error) throw error
+        }),
+      })
+      if (!res.ok) throw new Error('Request failed')
       toast.success('User updated')
       setEditing(null)
       load()
@@ -168,9 +166,8 @@ export default function AdminUsers() {
     if (!confirm(`Delete user "${name || 'this user'}"? This cannot be undone.`)) return
     setDeleting(id)
     try {
-      const supabase = createClient()
-      const { error } = await supabase.from('profiles').delete().eq('id', id)
-      if (error) throw error
+      const res = await fetch(`/api/admin/users/${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Request failed')
       toast.success('User removed')
       setUsers(prev => prev.filter(u => u.id !== id))
     } catch (err: any) {
@@ -187,22 +184,14 @@ export default function AdminUsers() {
     }
     setCreating(true)
     try {
-      const supabase = createClient()
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: newUser.email.trim(),
-        password: newUser.password,
-        options: { data: { full_name: newUser.full_name.trim(), role: newUser.role } }
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newUser),
       })
-      if (authError) throw authError
-      if (authData.user) {
-        await supabase.from('profiles').upsert({
-          id: authData.user.id,
-          full_name: newUser.full_name.trim() || null,
-          phone: newUser.phone.trim() || null,
-          role: newUser.role,
-        }, { onConflict: 'id' })
-      }
-      toast.success('User created', { description: `${newUser.email} has been added as ${newUser.role}.` })
+      const result = await res.json()
+      if (!result.ok) throw new Error(result.user?.msg || result.user?.message || 'Failed to create user')
+      toast.success('User created', { description: `${newUser.email} added as ${newUser.role}.` })
       setShowCreate(false)
       setNewUser({ full_name: '', email: '', password: '', phone: '', role: 'customer' })
       load()

@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
-import { Search, ChevronDown, Loader2, MapPin, X } from 'lucide-react'
+import { Search, ChevronDown, Loader2, MapPin } from 'lucide-react'
 import AdminLayout from '@/components/shared/AdminLayout'
 
 const STATUSES = ['pending', 'accepted', 'completed', 'cancelled']
@@ -47,37 +46,36 @@ export default function AdminBookings() {
 
   const load = async () => {
     setLoading(true)
-    const supabase = createClient()
-    const { data: bkData, error } = await supabase
-      .from('bookings')
-      .select('id, status, total_amount, estimated_weight_kg, address, notes, created_at, customer_id, collector_id, waste_types(name)')
-      .order('created_at', { ascending: false })
+    try {
+      const res = await fetch('/api/admin/bookings')
+      const bkData = await res.json()
+      const bkList = Array.isArray(bkData) ? bkData : []
 
-    if (error) { toast.error('Failed to load bookings'); setLoading(false); return }
-    const bkList = bkData || []
+      const ids = [...new Set([
+        ...bkList.map((b: any) => b.customer_id),
+        ...bkList.map((b: any) => b.collector_id),
+      ].filter(Boolean))]
 
-    // Fetch unique profile names separately to avoid FK join RLS issues
-    const ids = [...new Set([
-      ...bkList.map((b: any) => b.customer_id),
-      ...bkList.map((b: any) => b.collector_id),
-    ].filter(Boolean))]
+      let profileMap: Record<string, string> = {}
+      if (ids.length > 0) {
+        const pRes = await fetch(`/api/admin/profile-names?ids=${ids.join(',')}`)
+        const profiles = await pRes.json()
+        if (Array.isArray(profiles)) {
+          profiles.forEach((p: any) => { profileMap[p.id] = p.full_name })
+        }
+      }
 
-    let profileMap: Record<string, string> = {}
-    if (ids.length > 0) {
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, full_name')
-        .in('id', ids)
-      ;(profiles || []).forEach((p: any) => { profileMap[p.id] = p.full_name })
+      const enriched = bkList.map((b: any) => ({
+        ...b,
+        customer:  { full_name: profileMap[b.customer_id]  || null },
+        collector: { full_name: profileMap[b.collector_id] || null },
+      }))
+      setBookings(enriched)
+    } catch {
+      toast.error('Failed to load bookings')
+    } finally {
+      setLoading(false)
     }
-
-    const enriched = bkList.map((b: any) => ({
-      ...b,
-      customer: { full_name: profileMap[b.customer_id] || null },
-      collector: { full_name: profileMap[b.collector_id] || null },
-    }))
-    setBookings(enriched as any)
-    setLoading(false)
   }
 
   useEffect(() => { load() }, [])
@@ -99,12 +97,12 @@ export default function AdminBookings() {
   const handleStatusChange = async (bookingId: string, newStatus: string) => {
     setUpdating(bookingId)
     try {
-      const supabase = createClient()
-      const { error } = await supabase
-        .from('bookings')
-        .update({ status: newStatus })
-        .eq('id', bookingId)
-      if (error) throw error
+      const res = await fetch(`/api/admin/bookings/${bookingId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      })
+      if (!res.ok) throw new Error('Request failed')
       toast.success(`Status updated to ${STATUS_LABELS[newStatus]}`)
       setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status: newStatus } : b))
     } catch (err: any) {
@@ -166,7 +164,6 @@ export default function AdminBookings() {
             <div className="space-y-2">
               {filtered.map(b => (
                 <div key={b.id} className="border rounded-xl overflow-hidden">
-                  {/* Row */}
                   <div
                     className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 flex-wrap"
                     onClick={() => setExpanded(expanded === b.id ? null : b.id)}
@@ -189,7 +186,6 @@ export default function AdminBookings() {
                     <ChevronDown className={`w-4 h-4 text-gray-400 shrink-0 transition-transform ${expanded === b.id ? 'rotate-180' : ''}`} />
                   </div>
 
-                  {/* Expanded detail */}
                   {expanded === b.id && (
                     <div className="border-t bg-gray-50 px-4 py-4 space-y-3">
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
@@ -219,7 +215,6 @@ export default function AdminBookings() {
                         )}
                       </div>
 
-                      {/* Status override */}
                       <div className="flex items-center gap-2 pt-2 border-t flex-wrap">
                         <span className="text-xs text-gray-500 font-medium">Override status:</span>
                         {STATUSES.filter(s => s !== b.status).map(s => (

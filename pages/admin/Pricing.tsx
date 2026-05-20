@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -26,14 +25,15 @@ export default function AdminPricing() {
 
   const load = async () => {
     setLoading(true)
-    const supabase = createClient()
-    const { data, error } = await supabase
-      .from('waste_types')
-      .select('id, name, base_price_per_kg')
-      .order('name')
-    if (error) { toast.error('Failed to load waste types'); setLoading(false); return }
-    setWasteTypes(data || [])
-    setLoading(false)
+    try {
+      const res = await fetch('/api/admin/waste-types')
+      const data = await res.json()
+      setWasteTypes(Array.isArray(data) ? data : [])
+    } catch {
+      toast.error('Failed to load waste types')
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => { load() }, [])
@@ -54,21 +54,21 @@ export default function AdminPricing() {
     if (isNaN(price) || price < 0) { toast.error('Enter a valid price'); return }
     setSaving(true)
     try {
-      const supabase = createClient()
       if (form.id) {
-        const { data: updated, error } = await supabase
-          .from('waste_types')
-          .update({ name: form.name.trim(), base_price_per_kg: price })
-          .eq('id', form.id)
-          .select()
-        if (error) throw error
-        if (!updated || updated.length === 0) throw new Error('Permission denied — see Supabase setup notice on the dashboard.')
+        const res = await fetch(`/api/admin/waste-types/${form.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: form.name.trim(), base_price_per_kg: price }),
+        })
+        if (!res.ok) throw new Error('Request failed')
         toast.success('Waste type updated')
       } else {
-        const { error } = await supabase
-          .from('waste_types')
-          .insert({ name: form.name.trim(), base_price_per_kg: price })
-        if (error) throw error
+        const res = await fetch('/api/admin/waste-types', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: form.name.trim(), base_price_per_kg: price }),
+        })
+        if (!res.ok) throw new Error('Request failed')
         toast.success('Waste type added')
       }
       setShowForm(false)
@@ -84,9 +84,8 @@ export default function AdminPricing() {
     if (!confirm(`Delete "${name}"? Existing bookings referencing this type may be affected.`)) return
     setDeleting(id)
     try {
-      const supabase = createClient()
-      const { error } = await supabase.from('waste_types').delete().eq('id', id)
-      if (error) throw error
+      const res = await fetch(`/api/admin/waste-types/${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Request failed')
       toast.success('Waste type deleted')
       setWasteTypes(prev => prev.filter(w => w.id !== id))
     } catch (err: any) {
@@ -108,7 +107,6 @@ export default function AdminPricing() {
         </Button>
       </div>
 
-      {/* Info banner */}
       <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 mb-6 text-sm text-emerald-800 flex items-start gap-2">
         <PhilippinePeso className="w-4 h-4 mt-0.5 shrink-0" />
         <p>The <strong>base price per kg</strong> is used to calculate the total booking cost based on the customer's estimated weight.</p>
@@ -163,7 +161,6 @@ export default function AdminPricing() {
         </div>
       )}
 
-      {/* Add / Edit modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
