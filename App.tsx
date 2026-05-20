@@ -12,6 +12,7 @@ import CustomerProfilePage from "@/pages/customer/Profile";
 import CollectorJobsPage from "@/pages/collector/Jobs";
 import CollectorEarningsPage from "@/pages/collector/Earnings";
 import CollectorProfilePage from "@/pages/collector/Profile";
+import AdminLoginPage from "@/pages/admin/Login";
 import AdminDashboard from "@/pages/admin/Dashboard";
 import AdminUsers from "@/pages/admin/Users";
 import AdminBookings from "@/pages/admin/Bookings";
@@ -33,6 +34,7 @@ function Router() {
       <Route path="/collector/jobs" component={CollectorJobsPage} />
       <Route path="/collector/earnings" component={CollectorEarningsPage} />
       <Route path="/collector/profile" component={CollectorProfilePage} />
+      <Route path="/sys/access" component={AdminLoginPage} />
       <Route path="/admin/dashboard" component={AdminDashboard} />
       <Route path="/admin/users" component={AdminUsers} />
       <Route path="/admin/bookings" component={AdminBookings} />

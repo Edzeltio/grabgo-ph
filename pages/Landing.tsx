@@ -1,22 +1,50 @@
 import { useLocation } from 'wouter'
+import { useState, useRef, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Truck, Clock, MapPin, Shield, Recycle, Users } from 'lucide-react'
 
 export default function LandingPage() {
   const [, navigate] = useLocation()
+  const [logoClicks, setLogoClicks] = useState(0)
+  const [showSecret, setShowSecret] = useState(false)
+  const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handleLogoClick = useCallback(() => {
+    if (resetTimer.current) clearTimeout(resetTimer.current)
+    setLogoClicks(prev => {
+      const next = prev + 1
+      if (next >= 5) {
+        setShowSecret(true)
+        return 0
+      }
+      resetTimer.current = setTimeout(() => setLogoClicks(0), 3000)
+      return next
+    })
+  }, [])
 
   return (
     <div className="min-h-screen bg-white">
+      {/* Hidden system access button — appears after 5 logo clicks */}
+      {showSecret && (
+        <button
+          onClick={() => { setShowSecret(false); navigate('/sys/access') }}
+          className="fixed bottom-5 right-5 z-50 w-9 h-9 bg-gray-800/80 hover:bg-gray-700 rounded-full flex items-center justify-center shadow-lg backdrop-blur-sm transition-all animate-in fade-in duration-300"
+          title="System"
+        >
+          <span className="text-gray-300 text-xs font-mono">⚙</span>
+        </button>
+      )}
+
       <nav className="border-b bg-white/95 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center">
+          <div className="flex items-center gap-3" onClick={handleLogoClick} style={{ cursor: 'default' }}>
+            <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center select-none">
               <Truck className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="font-bold text-2xl text-gray-900">GarbGo PH</h1>
-              <p className="text-xs text-emerald-600 -mt-1">Zamboanga City</p>
+              <h1 className="font-bold text-2xl text-gray-900 select-none">GarbGo PH</h1>
+              <p className="text-xs text-emerald-600 -mt-1 select-none">Zamboanga City</p>
             </div>
           </div>
           <div className="flex items-center gap-4">

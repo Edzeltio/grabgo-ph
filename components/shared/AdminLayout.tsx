@@ -22,10 +22,10 @@ function AdminNav({ children }: { children: React.ReactNode }) {
     if (!isSupabaseConfigured()) return
     const supabase = createClient()
     supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) { navigate('/auth/login'); return }
+      if (!user) { navigate('/sys/access'); return }
       const { data: profile } = await supabase
         .from('profiles').select('role').eq('id', user.id).maybeSingle()
-      if (profile?.role !== 'admin') { navigate('/'); return }
+      if (profile?.role !== 'admin') { navigate('/sys/access'); return }
       setUser(user)
     })
   }, [])
