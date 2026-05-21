@@ -37,9 +37,9 @@ export default function BookPickupPage() {
   useEffect(() => {
     const fetchWasteTypes = async () => {
       try {
-        const supabase = createClient()
-        const { data } = await supabase.from('waste_types').select('*')
-        setWasteTypes(data || [])
+        const res = await fetch('/api/waste-types')
+        const data = await res.json()
+        setWasteTypes(Array.isArray(data) ? data : [])
       } catch (err) {
         console.error('Failed to fetch waste types:', err)
       }
