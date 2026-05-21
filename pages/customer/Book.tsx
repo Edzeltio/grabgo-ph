@@ -81,35 +81,36 @@ export default function BookPickupPage() {
 
     try {
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { session } } = await supabase.auth.getSession()
 
-      if (!user) {
+      if (!session) {
         toast.error("Please log in again")
         return
       }
 
-      const wasteTypeId = parseInt(form.waste_type_id)
-
-      const { data: booking, error: bookingError } = await supabase
-        .from('bookings')
-        .insert({
-          customer_id: user.id,
-          waste_type_id: wasteTypeId,
+      const bookingRes = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          waste_type_id: form.waste_type_id,
           address: form.address.trim(),
           lat: form.lat,
           lng: form.lng,
           estimated_weight_kg: form.estimated_weight_kg,
-          total_amount: form.estimated_weight_kg * 15,
           notes: form.notes?.trim() || null,
-        })
-        .select()
-        .single()
+        }),
+      })
 
-      if (bookingError) {
-        console.error("Booking Error:", bookingError)
-        throw new Error(bookingError.message)
+      const bookingJson = await bookingRes.json()
+
+      if (!bookingRes.ok) {
+        throw new Error(bookingJson.error || 'Failed to create booking')
       }
 
+      const booking = bookingJson.booking
       if (!booking) throw new Error("Failed to create booking")
 
       // Upload photos

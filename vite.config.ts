@@ -94,6 +94,86 @@ function profileApiPlugin() {
   };
 }
 
+function bookingsApiPlugin() {
+  return {
+    name: 'bookings-api',
+    configureServer(server: any) {
+      server.middlewares.use('/api/bookings', async (req: IncomingMessage, res: ServerResponse, next: () => void) => {
+        const SUPABASE_URL = process.env.VITE_SUPABASE_URL!;
+        const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+        if (!SERVICE_KEY || !SUPABASE_URL) { next(); return; }
+
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+
+        const method = req.method || 'GET';
+        if (method === 'OPTIONS') { res.statusCode = 200; res.end(); return; }
+        if (method !== 'POST') { res.statusCode = 405; res.end(JSON.stringify({ error: 'Method not allowed' })); return; }
+
+        try {
+          const authHeader = (req.headers as any)['authorization'] || '';
+          const userJwt = authHeader.replace('Bearer ', '');
+          if (!userJwt) { res.statusCode = 401; res.end(JSON.stringify({ error: 'Unauthorized' })); return; }
+
+          const authRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+            headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${userJwt}` },
+          });
+          if (!authRes.ok) { res.statusCode = 401; res.end(JSON.stringify({ error: 'Unauthorized' })); return; }
+          const authUser = await authRes.json();
+
+          const body = await readBody(req);
+          const { waste_type_id, address, lat, lng, estimated_weight_kg, notes } = body;
+
+          if (!waste_type_id || !address) {
+            res.statusCode = 400; res.end(JSON.stringify({ error: 'Missing required fields' })); return;
+          }
+
+          const h: Record<string, string> = {
+            apikey: SERVICE_KEY,
+            Authorization: `Bearer ${SERVICE_KEY}`,
+            'Content-Type': 'application/json',
+            Prefer: 'return=representation',
+          };
+
+          const wtRes = await fetch(`${SUPABASE_URL}/rest/v1/waste_types?id=eq.${waste_type_id}&select=base_price_per_kg&limit=1`, { headers: h });
+          const wtData = await wtRes.json();
+          const pricePerKg = wtData?.[0]?.base_price_per_kg ?? 15;
+          const weight = parseFloat(estimated_weight_kg) || 0;
+          const totalAmount = weight * pricePerKg;
+
+          const bookingRes = await fetch(`${SUPABASE_URL}/rest/v1/bookings`, {
+            method: 'POST',
+            headers: h,
+            body: JSON.stringify({
+              customer_id: authUser.id,
+              waste_type_id: parseInt(waste_type_id),
+              address: address.trim(),
+              lat: lat ?? null,
+              lng: lng ?? null,
+              estimated_weight_kg: weight,
+              total_amount: totalAmount,
+              notes: notes?.trim() || null,
+              status: 'pending',
+            }),
+          });
+
+          const bookingData = await bookingRes.json();
+          if (!bookingRes.ok) {
+            const msg = Array.isArray(bookingData) ? bookingData[0]?.message : bookingData?.message;
+            res.statusCode = 400; res.end(JSON.stringify({ error: msg || 'Failed to create booking' })); return;
+          }
+
+          const booking = Array.isArray(bookingData) ? bookingData[0] : bookingData;
+          res.end(JSON.stringify({ ok: true, booking }));
+        } catch (err: any) {
+          res.statusCode = 500;
+          res.end(JSON.stringify({ error: err.message }));
+        }
+      });
+    },
+  };
+}
+
 function wasteTypesApiPlugin() {
   return {
     name: 'waste-types-api',
@@ -270,7 +350,7 @@ function adminApiPlugin() {
 }
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), profileApiPlugin(), wasteTypesApiPlugin(), adminApiPlugin()],
+  plugins: [react(), tailwindcss(), profileApiPlugin(), bookingsApiPlugin(), wasteTypesApiPlugin(), adminApiPlugin()],
   resolve: {
     alias: {
       "@": __dirname,
