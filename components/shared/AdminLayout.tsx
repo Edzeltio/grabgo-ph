@@ -120,11 +120,11 @@ function AdminNav({ children }: { children: React.ReactNode }) {
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Topbar */}
-        <header className="bg-white border-b px-6 py-4 flex items-center justify-between sticky top-0 z-30">
-          <button className="lg:hidden" onClick={() => setSidebarOpen(true)}>
-            <Menu className="w-5 h-5 text-gray-600" />
-          </button>
-          <div className="hidden lg:block">
+        <header className="bg-white border-b px-4 py-4 flex items-center justify-between sticky top-0 z-30">
+          <div className="flex items-center gap-3">
+            <button className="lg:hidden p-1" onClick={() => setSidebarOpen(true)}>
+              <Menu className="w-5 h-5 text-gray-600" />
+            </button>
             <h2 className="text-sm font-semibold text-gray-700">
               {NAV.find(n => n.path === location)?.label ?? 'Admin'}
             </h2>
