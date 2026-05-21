@@ -35,45 +35,41 @@ export default function CustomerDashboard() {
   const [connected, setConnected] = useState(false)
   const [updatedIds, setUpdatedIds] = useState<Set<string>>(new Set())
   const [, navigate] = useLocation()
-  const userIdRef = useRef<string | null>(null)
+  const tokenRef = useRef<string | null>(null)
 
   useEffect(() => {
     const supabase = createClient()
     let channel: ReturnType<typeof supabase.channel> | null = null
 
     const init = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      userIdRef.current = user.id
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+      tokenRef.current = session.access_token
 
-      const { data } = await supabase
-        .from('bookings')
-        .select('*, waste_types(name)')
-        .eq('customer_id', user.id)
-        .order('created_at', { ascending: false })
-
-      setBookings(data || [])
+      const res = await fetch('/api/me/bookings', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+      const data = await res.json()
+      setBookings(Array.isArray(data) ? data : [])
       setLoading(false)
 
       channel = supabase
-        .channel(`customer-bookings-${user.id}`)
+        .channel(`customer-bookings-${session.user.id}`)
         .on(
           'postgres_changes',
           {
             event: '*',
             schema: 'public',
             table: 'bookings',
-            filter: `customer_id=eq.${user.id}`,
+            filter: `customer_id=eq.${session.user.id}`,
           },
           async (payload) => {
             if (payload.eventType === 'INSERT') {
-              const { data: newBooking } = await supabase
-                .from('bookings')
-                .select('*, waste_types(name)')
-                .eq('id', payload.new.id)
-                .single()
-
-              if (newBooking) {
+              const r = await fetch(`/api/me/bookings?id=${payload.new.id}`, {
+                headers: { Authorization: `Bearer ${tokenRef.current}` },
+              })
+              const newBooking = await r.json()
+              if (newBooking && newBooking.id) {
                 setBookings(prev => [newBooking, ...prev])
                 flashUpdate(newBooking.id)
               }

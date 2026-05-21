@@ -48,13 +48,15 @@ export default function BookingDetailPage() {
     let channel: ReturnType<typeof supabase.channel> | null = null
 
     const init = async () => {
-      const { data, error } = await supabase
-        .from('bookings')
-        .select('*, waste_types(name, base_price_per_kg)')
-        .eq('id', id)
-        .single()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { navigate('/auth/login'); return }
 
-      if (error || !data) {
+      const res = await fetch(`/api/me/bookings?id=${id}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+      const data = await res.json()
+
+      if (!res.ok || !data || !data.id) {
         toast.error('Booking not found')
         navigate('/customer/dashboard')
         return
@@ -75,10 +77,9 @@ export default function BookingDetailPage() {
             setTimeout(() => setJustUpdated(false), 2500)
 
             const messages: Record<string, string> = {
-              accepted:    'A collector has been assigned to your pickup!',
-
-              completed:   'Your garbage has been picked up. Thank you!',
-              cancelled:   'Your booking was cancelled.',
+              accepted:  'A collector has been assigned to your pickup!',
+              completed: 'Your garbage has been picked up. Thank you!',
+              cancelled: 'Your booking was cancelled.',
             }
             const msg = messages[updated.status]
             if (msg) {
@@ -145,7 +146,6 @@ export default function BookingDetailPage() {
             {/* Progress Steps */}
             {!isCancelled ? (
               <div className="relative mt-2">
-                {/* Connector line */}
                 <div className="absolute left-4 top-4 bottom-4 w-0.5 bg-gray-200" />
                 <div
                   className="absolute left-4 top-4 w-0.5 bg-emerald-500 transition-all duration-700"
@@ -161,7 +161,6 @@ export default function BookingDetailPage() {
 
                     return (
                       <div key={step.key} className="flex items-start gap-4 pl-0">
-                        {/* Node */}
                         <div className={`relative z-10 w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all duration-500 ${
                           done    ? 'bg-emerald-500 text-white' :
                           active  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-200 ring-4 ring-emerald-100' :
@@ -176,7 +175,6 @@ export default function BookingDetailPage() {
                           )}
                         </div>
 
-                        {/* Content */}
                         <div className={`pt-0.5 transition-opacity duration-300 ${upcoming ? 'opacity-40' : ''}`}>
                           <p className={`font-semibold text-sm ${active ? 'text-emerald-700' : done ? 'text-gray-900' : 'text-gray-400'}`}>
                             {step.label}
@@ -199,7 +197,7 @@ export default function BookingDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Map (only for active bookings with coordinates) */}
+        {/* Map */}
         {booking.status === 'accepted' && booking.lat && booking.lng && (
           <Card className="shadow-md mb-6">
             <CardContent className="py-5">

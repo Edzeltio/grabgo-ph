@@ -12,17 +12,14 @@ export default function CollectorEarningsPage() {
     const fetchEarnings = async () => {
       try {
         const supabase = createClient()
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) return
 
-        const { data } = await supabase
-          .from('bookings')
-          .select('*, waste_types(name)')
-          .eq('collector_id', user.id)
-          .in('status', ['accepted', 'completed'])
-          .order('created_at', { ascending: false })
-
-        setJobs(data || [])
+        const res = await fetch('/api/collector/earnings', {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        })
+        const data = await res.json()
+        setJobs(Array.isArray(data.jobs) ? data.jobs : [])
       } catch {
       } finally {
         setLoading(false)

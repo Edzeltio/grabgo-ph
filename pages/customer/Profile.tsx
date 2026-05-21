@@ -51,15 +51,14 @@ export default function CustomerProfilePage() {
       setSession(session)
       setUser(session.user)
 
-      const { data: p } = await supabase
-        .from('profiles')
-        .select('full_name, phone, address')
-        .eq('id', session.user.id)
-        .maybeSingle()
+      const res = await fetch('/api/me/profile', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+      const p = await res.json()
 
       setProfile({
-        full_name: p?.full_name || session.user.user_metadata?.full_name || '',
-        phone: p?.phone || session.user.user_metadata?.phone || '',
+        full_name: p?.full_name || '',
+        phone: p?.phone || '',
         address: p?.address || '',
       })
       setLoading(false)

@@ -42,15 +42,18 @@ function LoginForm() {
         navigate('/auth/verify-email')
         return
       }
+
       let role = authData.user.user_metadata?.role
       if (!role) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', authData.user.id)
-          .maybeSingle()
-        role = profile?.role
+        const res = await fetch('/api/me/profile', {
+          headers: { Authorization: `Bearer ${authData.session!.access_token}` },
+        })
+        if (res.ok) {
+          const p = await res.json()
+          role = p?.role
+        }
       }
+
       toast.success('Welcome back!')
       if (role === 'collector') {
         navigate('/collector/jobs')

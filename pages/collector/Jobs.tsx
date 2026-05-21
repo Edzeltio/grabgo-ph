@@ -19,6 +19,7 @@ export default function CollectorJobsPage() {
   const [updating, setUpdating] = useState<string | null>(null)
   const [connected, setConnected] = useState(false)
   const [newJobIds, setNewJobIds] = useState<Set<string>>(new Set())
+  const tokenRef = useRef<string | null>(null)
   const userIdRef = useRef<string | null>(null)
 
   useEffect(() => {
@@ -26,26 +27,17 @@ export default function CollectorJobsPage() {
     let channel: ReturnType<typeof supabase.channel> | null = null
 
     const init = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      userIdRef.current = user.id
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+      tokenRef.current = session.access_token
+      userIdRef.current = session.user.id
 
-      const [{ data: pending }, { data: active }] = await Promise.all([
-        supabase
-          .from('bookings')
-          .select('*, waste_types(name, base_price_per_kg)')
-          .eq('status', 'pending')
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('bookings')
-          .select('*, waste_types(name)')
-          .eq('collector_id', user.id)
-          .eq('status', 'accepted')
-          .order('created_at', { ascending: false }),
-      ])
-
-      setPendingJobs(pending || [])
-      setMyActiveJobs(active || [])
+      const res = await fetch('/api/collector/jobs', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+      const data = await res.json()
+      setPendingJobs(Array.isArray(data.pending) ? data.pending : [])
+      setMyActiveJobs(Array.isArray(data.active) ? data.active : [])
       setLoading(false)
 
       channel = supabase
@@ -55,13 +47,11 @@ export default function CollectorJobsPage() {
           { event: 'INSERT', schema: 'public', table: 'bookings' },
           async (payload) => {
             if (payload.new.status === 'pending') {
-              const { data: newJob } = await supabase
-                .from('bookings')
-                .select('*, waste_types(name, base_price_per_kg)')
-                .eq('id', payload.new.id)
-                .single()
-
-              if (newJob) {
+              const r = await fetch(`/api/me/bookings?id=${payload.new.id}`, {
+                headers: { Authorization: `Bearer ${tokenRef.current}` },
+              })
+              const newJob = await r.json()
+              if (newJob && newJob.id) {
                 setPendingJobs(prev => [newJob, ...prev])
                 flashNew(newJob.id)
                 toast.info('New pickup request available!', {
@@ -118,27 +108,24 @@ export default function CollectorJobsPage() {
   const handleAccept = async (jobId: string) => {
     setAccepting(jobId)
     try {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error("Please log in again")
-
-      const { data, error } = await supabase
-        .from('bookings')
-        .update({ status: 'accepted', collector_id: user.id })
-        .eq('id', jobId)
-        .eq('status', 'pending')
-        .select('*, waste_types(name)')
-        .single()
-
-      if (error) throw error
-      if (!data) throw new Error("Job not found or already taken")
+      const res = await fetch('/api/collector/jobs', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${tokenRef.current}`,
+        },
+        body: JSON.stringify({ jobId, action: 'accept' }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to accept job')
+      if (!data.job) throw new Error('Job not found or already taken')
 
       setPendingJobs(prev => prev.filter(j => j.id !== jobId))
-      setMyActiveJobs(prev => [data, ...prev])
+      setMyActiveJobs(prev => [data.job, ...prev])
 
-      toast.success("Job accepted!", { description: "Head to the pickup location." })
+      toast.success('Job accepted!', { description: 'Head to the pickup location.' })
     } catch (error: any) {
-      toast.error("Failed to accept job", { description: error.message || "Please try again" })
+      toast.error('Failed to accept job', { description: error.message || 'Please try again' })
     } finally {
       setAccepting(null)
     }
@@ -147,18 +134,21 @@ export default function CollectorJobsPage() {
   const handleStatusUpdate = async (jobId: string, newStatus: 'completed') => {
     setUpdating(jobId)
     try {
-      const supabase = createClient()
-      const { error } = await supabase
-        .from('bookings')
-        .update({ status: newStatus })
-        .eq('id', jobId)
-
-      if (error) throw error
+      const res = await fetch('/api/collector/jobs', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${tokenRef.current}`,
+        },
+        body: JSON.stringify({ jobId, action: 'complete' }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to complete job')
 
       setMyActiveJobs(prev => prev.filter(j => j.id !== jobId))
-      toast.success("Job completed! Great work 🎉")
+      toast.success('Job completed! Great work 🎉')
     } catch (error: any) {
-      toast.error("Failed to update status", { description: error.message })
+      toast.error('Failed to update status', { description: error.message })
     } finally {
       setUpdating(null)
     }

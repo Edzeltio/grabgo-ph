@@ -349,8 +349,184 @@ function adminApiPlugin() {
   };
 }
 
+function meBookingsApiPlugin() {
+  return {
+    name: 'me-bookings-api',
+    configureServer(server: any) {
+      server.middlewares.use('/api/me/bookings', async (req: IncomingMessage, res: ServerResponse, next: () => void) => {
+        const SUPABASE_URL = process.env.VITE_SUPABASE_URL!;
+        const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+        if (!SERVICE_KEY || !SUPABASE_URL) { next(); return; }
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        if ((req.method || 'GET') === 'OPTIONS') { res.statusCode = 200; res.end(); return; }
+        if ((req.method || 'GET') !== 'GET') { res.statusCode = 405; res.end(JSON.stringify({ error: 'Method not allowed' })); return; }
+        try {
+          const authHeader = (req.headers as any)['authorization'] || '';
+          const userJwt = authHeader.replace('Bearer ', '');
+          if (!userJwt) { res.statusCode = 401; res.end(JSON.stringify({ error: 'Unauthorized' })); return; }
+          const authRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${userJwt}` } });
+          if (!authRes.ok) { res.statusCode = 401; res.end(JSON.stringify({ error: 'Unauthorized' })); return; }
+          const authUser = await authRes.json();
+          const h: Record<string, string> = { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json' };
+          const urlStr = req.url || '/';
+          const params = new URLSearchParams(urlStr.includes('?') ? urlStr.split('?')[1] : '');
+          const id = params.get('id');
+          if (id) {
+            const r = await fetch(`${SUPABASE_URL}/rest/v1/bookings?id=eq.${id}&customer_id=eq.${authUser.id}&select=*,waste_types(name,base_price_per_kg)&limit=1`, { headers: h });
+            const data = await r.json();
+            const booking = Array.isArray(data) ? data[0] : null;
+            res.statusCode = booking ? 200 : 404;
+            res.end(JSON.stringify(booking || { error: 'Not found' }));
+          } else {
+            const r = await fetch(`${SUPABASE_URL}/rest/v1/bookings?customer_id=eq.${authUser.id}&select=*,waste_types(name)&order=created_at.desc`, { headers: h });
+            const data = await r.json();
+            res.end(JSON.stringify(Array.isArray(data) ? data : []));
+          }
+        } catch (err: any) { res.statusCode = 500; res.end(JSON.stringify({ error: err.message })); }
+      });
+    },
+  };
+}
+
+function meProfileApiPlugin() {
+  return {
+    name: 'me-profile-api',
+    configureServer(server: any) {
+      server.middlewares.use('/api/me/profile', async (req: IncomingMessage, res: ServerResponse, next: () => void) => {
+        const SUPABASE_URL = process.env.VITE_SUPABASE_URL!;
+        const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+        if (!SERVICE_KEY || !SUPABASE_URL) { next(); return; }
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        if ((req.method || 'GET') === 'OPTIONS') { res.statusCode = 200; res.end(); return; }
+        if ((req.method || 'GET') !== 'GET') { res.statusCode = 405; res.end(JSON.stringify({ error: 'Method not allowed' })); return; }
+        try {
+          const authHeader = (req.headers as any)['authorization'] || '';
+          const userJwt = authHeader.replace('Bearer ', '');
+          if (!userJwt) { res.statusCode = 401; res.end(JSON.stringify({ error: 'Unauthorized' })); return; }
+          const authRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${userJwt}` } });
+          if (!authRes.ok) { res.statusCode = 401; res.end(JSON.stringify({ error: 'Unauthorized' })); return; }
+          const authUser = await authRes.json();
+          const h: Record<string, string> = { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json' };
+          const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${authUser.id}&select=full_name,phone,address,role&limit=1`, { headers: h });
+          const rows = await r.json();
+          const profile = Array.isArray(rows) ? rows[0] : null;
+          res.end(JSON.stringify({
+            full_name: profile?.full_name || authUser.user_metadata?.full_name || '',
+            phone: profile?.phone || authUser.user_metadata?.phone || '',
+            address: profile?.address || '',
+            role: profile?.role || authUser.user_metadata?.role || 'customer',
+          }));
+        } catch (err: any) { res.statusCode = 500; res.end(JSON.stringify({ error: err.message })); }
+      });
+    },
+  };
+}
+
+function collectorJobsApiPlugin() {
+  return {
+    name: 'collector-jobs-api',
+    configureServer(server: any) {
+      server.middlewares.use('/api/collector/jobs', async (req: IncomingMessage, res: ServerResponse, next: () => void) => {
+        const SUPABASE_URL = process.env.VITE_SUPABASE_URL!;
+        const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+        if (!SERVICE_KEY || !SUPABASE_URL) { next(); return; }
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        const method = req.method || 'GET';
+        if (method === 'OPTIONS') { res.statusCode = 200; res.end(); return; }
+        if (method !== 'GET' && method !== 'PATCH') { res.statusCode = 405; res.end(JSON.stringify({ error: 'Method not allowed' })); return; }
+        try {
+          const authHeader = (req.headers as any)['authorization'] || '';
+          const userJwt = authHeader.replace('Bearer ', '');
+          if (!userJwt) { res.statusCode = 401; res.end(JSON.stringify({ error: 'Unauthorized' })); return; }
+          const authRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${userJwt}` } });
+          if (!authRes.ok) { res.statusCode = 401; res.end(JSON.stringify({ error: 'Unauthorized' })); return; }
+          const authUser = await authRes.json();
+          const h: Record<string, string> = { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=representation' };
+          if (method === 'GET') {
+            const [pRes, aRes] = await Promise.all([
+              fetch(`${SUPABASE_URL}/rest/v1/bookings?status=eq.pending&select=*,waste_types(name,base_price_per_kg)&order=created_at.desc`, { headers: h }),
+              fetch(`${SUPABASE_URL}/rest/v1/bookings?collector_id=eq.${authUser.id}&status=eq.accepted&select=*,waste_types(name)&order=created_at.desc`, { headers: h }),
+            ]);
+            res.end(JSON.stringify({ pending: await pRes.json(), active: await aRes.json() }));
+          } else {
+            const body = await readBody(req);
+            const { jobId, action } = body || {};
+            if (!jobId || !action) { res.statusCode = 400; res.end(JSON.stringify({ error: 'Missing jobId or action' })); return; }
+            if (action === 'accept') {
+              const r = await fetch(`${SUPABASE_URL}/rest/v1/bookings?id=eq.${jobId}&status=eq.pending`, { method: 'PATCH', headers: h, body: JSON.stringify({ status: 'accepted', collector_id: authUser.id }) });
+              const data = await r.json();
+              if (!r.ok) { res.statusCode = 400; res.end(JSON.stringify({ error: 'Failed to accept job' })); return; }
+              const job = Array.isArray(data) ? data[0] : data;
+              if (!job) { res.statusCode = 409; res.end(JSON.stringify({ error: 'Job not found or already taken' })); return; }
+              if (job.waste_type_id) {
+                const wtRes = await fetch(`${SUPABASE_URL}/rest/v1/waste_types?id=eq.${job.waste_type_id}&select=name&limit=1`, { headers: h });
+                const wtData = await wtRes.json();
+                job.waste_types = wtData?.[0] || null;
+              }
+              res.end(JSON.stringify({ ok: true, job }));
+            } else if (action === 'complete') {
+              const r = await fetch(`${SUPABASE_URL}/rest/v1/bookings?id=eq.${jobId}&collector_id=eq.${authUser.id}`, { method: 'PATCH', headers: h, body: JSON.stringify({ status: 'completed' }) });
+              if (!r.ok) { res.statusCode = 400; res.end(JSON.stringify({ error: 'Failed to complete job' })); return; }
+              res.end(JSON.stringify({ ok: true }));
+            } else {
+              res.statusCode = 400; res.end(JSON.stringify({ error: 'Unknown action' }));
+            }
+          }
+        } catch (err: any) { res.statusCode = 500; res.end(JSON.stringify({ error: err.message })); }
+      });
+    },
+  };
+}
+
+function collectorEarningsApiPlugin() {
+  return {
+    name: 'collector-earnings-api',
+    configureServer(server: any) {
+      server.middlewares.use('/api/collector/earnings', async (req: IncomingMessage, res: ServerResponse, next: () => void) => {
+        const SUPABASE_URL = process.env.VITE_SUPABASE_URL!;
+        const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+        if (!SERVICE_KEY || !SUPABASE_URL) { next(); return; }
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        if ((req.method || 'GET') === 'OPTIONS') { res.statusCode = 200; res.end(); return; }
+        if ((req.method || 'GET') !== 'GET') { res.statusCode = 405; res.end(JSON.stringify({ error: 'Method not allowed' })); return; }
+        try {
+          const authHeader = (req.headers as any)['authorization'] || '';
+          const userJwt = authHeader.replace('Bearer ', '');
+          if (!userJwt) { res.statusCode = 401; res.end(JSON.stringify({ error: 'Unauthorized' })); return; }
+          const authRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${userJwt}` } });
+          if (!authRes.ok) { res.statusCode = 401; res.end(JSON.stringify({ error: 'Unauthorized' })); return; }
+          const authUser = await authRes.json();
+          const h: Record<string, string> = { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json' };
+          const [jobsRes, allRes] = await Promise.all([
+            fetch(`${SUPABASE_URL}/rest/v1/bookings?collector_id=eq.${authUser.id}&status=in.(accepted,completed)&select=*,waste_types(name)&order=created_at.desc`, { headers: h }),
+            fetch(`${SUPABASE_URL}/rest/v1/bookings?collector_id=eq.${authUser.id}&select=status`, { headers: h }),
+          ]);
+          const jobs = await jobsRes.json();
+          const allJobs = await allRes.json();
+          res.end(JSON.stringify({
+            jobs: Array.isArray(jobs) ? jobs : [],
+            stats: {
+              completed: Array.isArray(allJobs) ? allJobs.filter((j: any) => j.status === 'completed').length : 0,
+              total: Array.isArray(allJobs) ? allJobs.length : 0,
+            },
+          }));
+        } catch (err: any) { res.statusCode = 500; res.end(JSON.stringify({ error: err.message })); }
+      });
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react(), tailwindcss(), profileApiPlugin(), bookingsApiPlugin(), wasteTypesApiPlugin(), adminApiPlugin()],
+  plugins: [
+    react(), tailwindcss(),
+    meBookingsApiPlugin(), meProfileApiPlugin(),
+    collectorJobsApiPlugin(), collectorEarningsApiPlugin(),
+    profileApiPlugin(), bookingsApiPlugin(), wasteTypesApiPlugin(), adminApiPlugin(),
+  ],
   resolve: {
     alias: {
       "@": __dirname,

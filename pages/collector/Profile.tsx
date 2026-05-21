@@ -63,25 +63,27 @@ export default function CollectorProfilePage() {
       setSession(session)
       setUser(session.user)
 
-      const [{ data: p }, { data: jobs }] = await Promise.all([
-        supabase.from('profiles').select('full_name, phone, address').eq('id', session.user.id).maybeSingle(),
-        supabase.from('bookings').select('status').eq('collector_id', session.user.id),
+      const [profileRes, earningsRes] = await Promise.all([
+        fetch('/api/me/profile', { headers: { Authorization: `Bearer ${session.access_token}` } }),
+        fetch('/api/collector/earnings', { headers: { Authorization: `Bearer ${session.access_token}` } }),
       ])
 
+      const p = await profileRes.json()
+      const earningsData = await earningsRes.json()
       const meta = session.user.user_metadata || {}
+
       setProfile({
-        full_name: p?.full_name || meta.full_name || '',
-        phone: p?.phone || meta.phone || '',
+        full_name: p?.full_name || '',
+        phone: p?.phone || '',
         address: p?.address || '',
         vehicle_type: meta.vehicle_type || '',
         vehicle_plate: meta.vehicle_plate || '',
         service_area: meta.service_area || '',
       })
 
-      const jobList = jobs || []
       setStats({
-        completed: jobList.filter((j) => j.status === 'completed').length,
-        total: jobList.length,
+        completed: earningsData?.stats?.completed ?? 0,
+        total: earningsData?.stats?.total ?? 0,
       })
       setLoading(false)
     }
